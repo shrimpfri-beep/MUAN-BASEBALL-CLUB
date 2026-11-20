@@ -161,6 +161,28 @@ footer{background:var(--deep);padding:40px 24px;text-align:center;border-top:1px
 .bgm.ready{display:flex}.bgm.on{animation:spin 4s linear infinite}
 .bgm-tip{pointer-events:none;position:fixed;top:66px;right:max(10px,calc(50% - 230px));z-index:40;background:rgba(13,27,62,.92);color:var(--gold-l);font-size:11px;padding:6px 10px;border-radius:8px;border:1px solid rgba(212,175,55,.3);transition:opacity .4s}
 @keyframes spin{to{transform:rotate(360deg)}}
+[hidden]{display:none!important}
+/* GUESTBOOK */
+.gb-form{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:18px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+.gb-icons{display:flex;gap:6px;margin-bottom:10px}
+.gb-icons button{flex:1;font-size:20px;padding:6px 0;border-radius:10px;border:1px solid #e5e7eb;background:#f9fafb;cursor:pointer;transition:all .15s}
+.gb-icons button.sel{border-color:var(--gold);background:#FFF8E1;transform:scale(1.06)}
+.gb-form input,.gb-form textarea{width:100%;font-family:inherit;font-size:16px;padding:11px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;color:var(--ink);outline:none}
+.gb-form input:focus,.gb-form textarea:focus{border-color:var(--gold);background:#fff}
+.gb-form textarea{resize:none;height:88px;margin-top:8px;line-height:1.5}
+.gb-meta{display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;margin:6px 2px 10px}
+.gb-total{text-align:center;font-size:12px;color:#6b7280;margin:18px 0 10px}
+.gb-total b{color:var(--red)}
+.gb-list{display:flex;flex-direction:column;gap:10px}
+.gb-item{background:#fff;border:1px solid #eee;border-left:3px solid var(--gold);border-radius:12px;padding:12px 14px;animation:pop .4s ease}
+.gb-item .h{display:flex;justify-content:space-between;align-items:center}
+.gb-item .n{font-weight:700;font-size:14px;color:var(--night)}
+.gb-item .t{font-size:11px;color:#9ca3af}
+.gb-item p{font-size:13.5px;color:#374151;margin-top:5px;line-height:1.6;white-space:pre-wrap;word-break:break-all}
+.gb-empty{text-align:center;font-size:13px;color:#9ca3af;padding:20px 0}
+.gb-more{margin-top:12px;background:#f3f4f6;color:#374151}
+.gb-off{font-size:12px;color:#b45309;background:#FEF3C7;border-radius:10px;padding:10px;text-align:center;margin-bottom:10px}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 /* LIGHTBOX & TOAST */
 .lightbox{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.95);display:none;flex-direction:column;padding:16px}
 .lightbox.show{display:flex}
@@ -347,6 +369,28 @@ footer{background:var(--deep);padding:40px 24px;text-align:center;border-top:1px
           <a class="btn tmap" href="https://tmap.co.kr/tmap2/mobile/route.jsp?name=남악스카이웨딩홀" target="_blank" rel="noopener" onclick="return openTmap(event)">티맵</a>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ===== GUESTBOOK ===== -->
+  <section class="light" style="border-top:1px solid #eee">
+    <div class="reveal">
+      <div class="head"><span class="eyebrow">GUESTBOOK</span><h3 class="title">축하 방명록</h3><div class="bar"></div></div>
+      <p style="text-align:center;font-size:13px;color:#6b7280;margin:-8px 0 18px">무안BC의 10년을 함께한 마음을 남겨 주세요</p>
+      <form class="gb-form" id="gb-form" onsubmit="return false">
+        <div class="gb-off" id="gb-off" hidden>방명록을 준비하고 있습니다. 잠시 후 다시 들러 주세요!</div>
+        <div class="gb-icons" id="gb-icons">
+          <button type="button" data-i="⚾" class="sel">⚾</button><button type="button" data-i="🎉">🎉</button>
+          <button type="button" data-i="👏">👏</button><button type="button" data-i="❤️">❤️</button><button type="button" data-i="🏆">🏆</button>
+        </div>
+        <input id="gb-name" maxlength="12" placeholder="이름 (예: 6학년 OOO 학부모, 졸업생 OOO)" autocomplete="name">
+        <textarea id="gb-msg" maxlength="200" placeholder="축하 메시지를 남겨 주세요 (200자 이내)"></textarea>
+        <div class="gb-meta"><span>남긴 글은 모두에게 공개됩니다</span><span id="gb-count">0 / 200</span></div>
+        <button type="button" class="btn btn-gold" id="gb-submit" onclick="gbSubmit()">축하 메시지 남기기</button>
+      </form>
+      <p class="gb-total" id="gb-total"></p>
+      <div class="gb-list" id="gb-list"><p class="gb-empty">불러오는 중…</p></div>
+      <button type="button" class="btn gb-more" id="gb-more" hidden onclick="gbShowMore()">더 보기</button>
     </div>
   </section>
 
@@ -545,6 +589,80 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden) bgm.pause
 /* ---------- 스크롤 등장 효과 ---------- */
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('active');io.unobserve(e.target)}}),{threshold:.12});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+<script type="module">
+/* ================= 방명록 (Firebase Realtime Database) =================
+   ▼ Firebase 콘솔 → 프로젝트 설정 → 내 앱(웹)의 firebaseConfig 값을 붙여넣으세요 */
+const FIREBASE_CONFIG = {
+  apiKey: "여기에-apiKey",
+  authDomain: "earth-life-gacha.firebaseapp.com",
+  databaseURL: "여기에-databaseURL",
+  projectId: "earth-life-gacha",
+  appId: "여기에-appId"
+};
+const GB_PATH = 'muanbc_guestbook';      // 다른 게임 데이터와 분리된 방명록 전용 공간
+/* ====================================================================== */
+
+const $=id=>document.getElementById(id);
+const PAGE=10; let all=[], shown=PAGE, icon='⚾', db, api;
+const BAD=/(시발|씨발|ㅅㅂ|병신|ㅂㅅ|개새|좆|존나|fuck|shit)/i;
+
+$('gb-icons').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  [...$('gb-icons').children].forEach(x=>x.classList.toggle('sel',x===b));icon=b.dataset.i;});
+$('gb-msg').addEventListener('input',e=>$('gb-count').textContent=`${e.target.value.length} / 200`);
+try{const n=localStorage.getItem('gb-name');if(n)$('gb-name').value=n;}catch{}
+
+function fmt(ts){const d=new Date(ts),p=n=>String(n).padStart(2,'0');
+  return `${d.getMonth()+1}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
+function render(){
+  const list=$('gb-list'); list.textContent='';
+  $('gb-total').innerHTML=all.length?`지금까지 <b>${all.length}</b>개의 축하 메시지가 도착했어요`:'';
+  if(!all.length){list.innerHTML='<p class="gb-empty">첫 번째 축하 메시지를 남겨 주세요 ⚾</p>';$('gb-more').hidden=true;return;}
+  all.slice(0,shown).forEach(m=>{
+    const el=document.createElement('div');el.className='gb-item';
+    el.innerHTML='<div class="h"><span class="n"></span><span class="t"></span></div><p></p>';
+    el.querySelector('.n').textContent=`${m.icon||'⚾'} ${m.name}`;   // textContent로 넣어 스크립트 삽입 차단
+    el.querySelector('.t').textContent=fmt(m.ts);
+    el.querySelector('p').textContent=m.msg;
+    list.appendChild(el);
+  });
+  $('gb-more').hidden=all.length<=shown;
+}
+window.gbShowMore=()=>{shown+=PAGE;render();};
+function disable(){ $('gb-off').hidden=false; $('gb-submit').disabled=true; $('gb-submit').style.opacity=.5;
+  $('gb-list').innerHTML='<p class="gb-empty">방명록 준비 중입니다</p>'; }
+
+window.gbSubmit=async()=>{
+  const name=$('gb-name').value.trim(), msg=$('gb-msg').value.trim();
+  if(!api) return toast('방명록 준비 중입니다');
+  if(!name) return toast('이름을 입력해 주세요'), $('gb-name').focus();
+  if(msg.length<2) return toast('메시지를 2자 이상 입력해 주세요'), $('gb-msg').focus();
+  if(BAD.test(name+msg)) return toast('고운 말로 축하를 남겨 주세요 🙏');
+  let last=0; try{last=+localStorage.getItem('gb-last')||0}catch{}
+  if(Date.now()-last<30000) return toast('잠시 후 다시 남겨 주세요 (30초)');
+  const btn=$('gb-submit'); btn.disabled=true; btn.textContent='등록 중…';
+  try{
+    await api.push(api.ref(db,GB_PATH),{name,msg,icon,ts:api.serverTimestamp()});
+    try{localStorage.setItem('gb-last',Date.now());localStorage.setItem('gb-name',name);}catch{}
+    $('gb-msg').value=''; $('gb-count').textContent='0 / 200';
+    toast('축하 메시지가 등록되었습니다 🎉');
+    $('gb-list').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){ console.error(e); toast('등록에 실패했습니다. 잠시 후 다시 시도해 주세요'); }
+  btn.disabled=false; btn.textContent='축하 메시지 남기기';
+};
+
+(async()=>{
+  if(FIREBASE_CONFIG.apiKey.startsWith('여기에')) return disable();
+  try{
+    const V='10.12.2';
+    const {initializeApp}=await import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`);
+    api=await import(`https://www.gstatic.com/firebasejs/${V}/firebase-database.js`);
+    db=api.getDatabase(initializeApp(FIREBASE_CONFIG,'muanbc'));
+    const q=api.query(api.ref(db,GB_PATH),api.orderByChild('ts'),api.limitToLast(500));
+    api.onValue(q,snap=>{ const arr=[]; snap.forEach(c=>{arr.push(c.val())}); all=arr.reverse(); render(); },
+      err=>{console.error(err);disable();});
+  }catch(e){ console.error(e); disable(); }
+})();
 </script>
 </body>
 </html>
