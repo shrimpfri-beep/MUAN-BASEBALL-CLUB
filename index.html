@@ -11,9 +11,17 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="무안BC야구단 창단 10주년 기념행사 초대장">
 <meta property="og:description" content="2026.12.5(토) 오후 5시 · 남악스카이웨딩홀 | 야구를 통해 더 큰 꿈을 향해!">
-<meta property="og:image" content="https://shrimpfri-beep.github.io/MUAN-BASEBALL-CLUB/images/og-image.jpg">
+<meta property="og:site_name" content="무안BC야구단">
+<meta property="og:image" content="https://shrimpfri-beep.github.io/MUAN-BASEBALL-CLUB/images/kakao-thumb.jpg">
+<meta property="og:image:secure_url" content="https://shrimpfri-beep.github.io/MUAN-BASEBALL-CLUB/images/kakao-thumb.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="무안BC야구단 10주년 기념행사 초대합니다">
+<meta property="og:locale" content="ko_KR">
 <meta property="og:url" content="https://shrimpfri-beep.github.io/MUAN-BASEBALL-CLUB/">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://shrimpfri-beep.github.io/MUAN-BASEBALL-CLUB/images/kakao-thumb.jpg">
 
 <link rel="icon" type="image/png" href="images/favicon.png">
 <link rel="apple-touch-icon" href="images/favicon.png">
@@ -151,7 +159,7 @@ footer{background:var(--deep);padding:40px 24px;text-align:center;border-top:1px
 
 .bgm{position:fixed;top:14px;right:max(14px,calc(50% - 226px));z-index:40;width:44px;height:44px;border-radius:50%;border:1px solid rgba(212,175,55,.5);background:rgba(13,27,62,.85);color:var(--gold-l);font-size:18px;cursor:pointer;backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.4)}
 .bgm.ready{display:flex}.bgm.on{animation:spin 4s linear infinite}
-.bgm-tip{position:fixed;top:66px;right:max(10px,calc(50% - 230px));z-index:40;background:rgba(13,27,62,.92);color:var(--gold-l);font-size:11px;padding:6px 10px;border-radius:8px;border:1px solid rgba(212,175,55,.3);transition:opacity .4s}
+.bgm-tip{pointer-events:none;position:fixed;top:66px;right:max(10px,calc(50% - 230px));z-index:40;background:rgba(13,27,62,.92);color:var(--gold-l);font-size:11px;padding:6px 10px;border-radius:8px;border:1px solid rgba(212,175,55,.3);transition:opacity .4s}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* LIGHTBOX & TOAST */
 .lightbox{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.95);display:none;flex-direction:column;padding:16px}
@@ -362,7 +370,7 @@ footer{background:var(--deep);padding:40px 24px;text-align:center;border-top:1px
 <!-- BGM: music/BGM.mp3 파일을 넣으면 버튼이 나타남 -->
 <audio id="bgm" src="music/BGM.mp3" loop preload="auto"></audio>
 <button class="bgm" id="bgm-btn" aria-label="배경음악 켜기/끄기" onclick="toggleBGM()">♪</button>
-<div class="bgm-tip" id="bgm-tip" style="opacity:0">♪ 눌러서 음악 듣기</div>
+<div class="bgm-tip" id="bgm-tip" style="opacity:0">눌러서 음악 끄기</div>
 
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="if(event.target.closest('.lb-top')===null)closeLightbox()">
@@ -488,26 +496,51 @@ function toast(msg){
   clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2600);
 }
 
-/* ---------- 배경음악 ---------- */
+/* ---------- 배경음악 (자동재생 · 버튼으로 끄기) ---------- */
 const bgm=document.getElementById('bgm'), bgmBtn=document.getElementById('bgm-btn'), bgmTip=document.getElementById('bgm-tip');
-bgm.volume=0.45;
-let bgmWanted=false;
-bgm.addEventListener('canplay',()=>{ if(bgmBtn.classList.contains('ready'))return;
-  bgmBtn.classList.add('ready'); bgmTip.style.opacity=1; setTimeout(()=>bgmTip.style.opacity=0,4000); },{once:true});
-bgm.addEventListener('error',()=>bgmBtn.remove());           // 음악 파일 없으면 버튼 숨김
-function setBGM(on){ bgmWanted=on;
-  if(on){ bgm.play().then(()=>{bgmBtn.classList.add('on');bgmBtn.textContent='♫'}).catch(()=>{}); }
-  else { bgm.pause(); bgmBtn.classList.remove('on'); bgmBtn.textContent='♪'; } }
-function toggleBGM(){ bgmTip.style.opacity=0; setBGM(bgm.paused); }
-/* 첫 터치 때 자동 재생 (브라우저 정책상 터치 전 자동재생은 불가) */
-const firstTouch=e=>{ if(e.target.closest('#bgm-btn,video'))return; setBGM(true); ['click','touchstart'].forEach(t=>removeEventListener(t,firstTouch)); };
-['click','touchstart'].forEach(t=>addEventListener(t,firstTouch,{passive:true}));
-/* 영상 재생 중엔 음악 일시정지, 끝나면 다시 */
 const vid=document.querySelector('video');
-vid.addEventListener('play',()=>{ if(!bgm.paused){bgm.pause();vid._resume=true} });
-['pause','ended'].forEach(ev=>vid.addEventListener(ev,()=>{ if(vid._resume&&bgmWanted){bgm.play();vid._resume=false} }));
-/* 다른 탭으로 가면 정지 */
-document.addEventListener('visibilitychange',()=>{ if(document.hidden)bgm.pause(); else if(bgmWanted&&vid.paused)bgm.play().catch(()=>{}); });
+bgm.volume=0.45;
+let bgmWanted=true;          // 기본값: 음악 켜짐
+let tipTimer;
+function showTip(text,ms=3000){ bgmTip.textContent=text; bgmTip.style.opacity=1; clearTimeout(tipTimer); tipTimer=setTimeout(()=>bgmTip.style.opacity=0,ms); }
+function paintBtn(){
+  const playing=!bgm.paused;
+  bgmBtn.classList.toggle('on',playing);
+  bgmBtn.textContent = bgmWanted ? '♫' : '♪';
+  bgmBtn.style.opacity = bgmWanted ? 1 : .6;
+  bgmBtn.setAttribute('aria-label', bgmWanted ? '배경음악 끄기' : '배경음악 켜기');
+}
+function tryPlay(){ if(!bgmWanted || !vid.paused) return Promise.resolve(false);
+  return bgm.play().then(()=>{ paintBtn(); return true; }).catch(()=>false); }
+
+bgm.addEventListener('play',paintBtn); bgm.addEventListener('pause',paintBtn);
+bgm.addEventListener('error',()=>{ bgmBtn.remove(); bgmTip.remove(); });   // 음악 파일 없으면 숨김
+bgm.addEventListener('canplay',()=>{
+  bgmBtn.classList.add('ready'); paintBtn();
+  tryPlay().then(()=>showTip('눌러서 음악 끄기',4000));                     // ① 열자마자 자동재생 시도
+},{once:true});
+
+/* ② 브라우저가 자동재생을 막은 경우: 화면을 처음 터치·클릭하는 순간 재생 */
+const UNLOCK=['pointerdown','touchend','click','keydown'];
+function unlock(e){
+  if(e.target.closest && e.target.closest('#bgm-btn')) return;             // 끄기 버튼 터치는 제외
+  tryPlay().then(ok=>{ if(ok || !bgmWanted) UNLOCK.forEach(t=>removeEventListener(t,unlock,true)); });
+}
+UNLOCK.forEach(t=>addEventListener(t,unlock,{capture:true,passive:true}));
+
+/* 버튼: 켜져 있으면 끄기, 꺼져 있으면 켜기 */
+function toggleBGM(){
+  bgmWanted=!bgmWanted;
+  if(bgmWanted){ tryPlay(); showTip('눌러서 음악 끄기',2000); }
+  else { bgm.pause(); showTip('음악을 껐습니다 · 다시 누르면 켜기',2500); }
+  paintBtn();
+}
+
+/* 영상 재생 중엔 음악 일시정지, 영상이 멈추면 다시 */
+vid.addEventListener('play',()=>bgm.pause());
+['pause','ended'].forEach(ev=>vid.addEventListener(ev,()=>tryPlay()));
+/* 다른 앱·탭으로 가면 정지, 돌아오면 이어서 */
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) bgm.pause(); else tryPlay(); });
 
 /* ---------- 스크롤 등장 효과 ---------- */
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('active');io.unobserve(e.target)}}),{threshold:.12});
